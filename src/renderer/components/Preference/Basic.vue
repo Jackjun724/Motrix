@@ -384,6 +384,7 @@
         this.$store.dispatch('preference/fetchPreference')
           .then((config) => {
             this.form = initForm(config)
+            console.log(config)
             this.formOriginal = cloneDeep(this.form)
           })
       },

@@ -18,6 +18,7 @@ const actions = {
     return new Promise((resolve) => {
       api.fetchPreference()
         .then((config) => {
+          console.log(config)
           commit('UPDATE_PREFERENCE_DATA', config)
           resolve(config)
         })

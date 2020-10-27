@@ -26,7 +26,70 @@
         </el-tab-pane>
         <el-tab-pane :label="$t('task.torrent-task')" name="torrent">
           <el-form-item>
-            <mo-select-torrent v-on:change="handleTorrentChange" />
+            <mo-select-torrent v-on:change="handleTorrentChange"/>
+          </el-form-item>
+        </el-tab-pane>
+        <el-tab-pane label="百度云下载" name="baidu">
+          <el-form-item>
+            <el-row :gutter="12">
+              <el-col :span="11" :xs="24">
+                <el-form-item
+                  label="链接: "
+                  label-width="50px"
+                >
+                  <el-input
+                    placeholder="百度云链接"
+                    v-model="baiduYun.url"
+                  >
+                  </el-input>
+                </el-form-item>
+              </el-col>
+
+              <el-col :span="8" :xs="24">
+                <el-form-item
+                  label="提取码："
+                  label-width="70px"
+                >
+                  <el-input
+                    v-model="baiduYun.code"
+                    placeholder="提取码"
+                  >
+                  </el-input>
+                </el-form-item>
+              </el-col>
+
+              <el-col :span="4">
+                <el-button @click="getFile">
+                  获取文件
+                </el-button>
+              </el-col>
+              <el-col :span="24">
+                <el-table
+                  v-loading="tableLoading"
+                  :data="baiduYunList"
+                  highlight-current-row
+                  @current-change="handleCurrentChange"
+                  ref="baiduYunTable"
+                  style="width: 100%">
+                  <el-table-column
+                    prop="server_filename"
+                    label="名称"
+                    show-overflow-tooltip
+                    width="220">
+                  </el-table-column>
+                  <el-table-column
+                    prop="size"
+                    label="大小"
+                    width="100">
+                  </el-table-column>
+                  <el-table-column
+                    prop="md5"
+                    show-overflow-tooltip
+                    label="MD5">
+                  </el-table-column>
+                </el-table>
+              </el-col>
+            </el-row>
           </el-form-item>
         </el-tab-pane>
       </el-tabs>
@@ -131,7 +194,7 @@
             <div class="help-link">
               <a target="_blank" href="https://github.com/agalwood/Motrix/wiki/Proxy" rel="noopener noreferrer">
                 {{ $t('preferences.proxy-tips') }}
-                <mo-icon name="link" width="12" height="12" />
+                <mo-icon name="link" width="12" height="12"/>
               </a>
             </div>
           </el-col>
@@ -168,18 +231,15 @@
 
 <script>
   import is from 'electron-is'
-  import { mapState } from 'vuex'
-  import { isEmpty } from 'lodash'
+  import {mapState} from 'vuex'
+  import {isEmpty} from 'lodash'
   import SelectDirectory from '@/components/Native/SelectDirectory'
   import SelectTorrent from '@/components/Task/SelectTorrent'
-  import {
-    initTaskForm,
-    buildUriPayload,
-    buildTorrentPayload
-  } from '@/utils/task'
-  import { ADD_TASK_TYPE } from '@shared/constants'
-  import { detectResource } from '@shared/utils'
+  import {buildTorrentPayload, buildUriPayload, initTaskForm} from '@/utils/task'
+  import {ADD_TASK_TYPE} from '@shared/constants'
+  import {detectResource} from '@shared/utils'
   import '@/components/Icons/inbox'
+  import {getDownloadAddress, getFilePath} from '../../../shared/utils/baiduyun'
 
   export default {
     name: 'mo-add-task',
@@ -197,12 +257,20 @@
         default: ADD_TASK_TYPE.URI
       }
     },
-    data () {
+    data() {
       return {
         formLabelWidth: '100px',
         showAdvanced: false,
         form: {},
-        rules: {}
+        rules: {},
+        baiduYun: {
+          url: '',
+          code: ''
+        },
+        baiduYunList: [],
+        currentRow: '',
+        tableLoading: false,
+        baiduYunData: '',
       }
     },
     computed: {
@@ -214,12 +282,12 @@
       ...mapState('preference', {
         config: state => state.config
       }),
-      taskType () {
+      taskType() {
         return this.type
       }
     },
     watch: {
-      taskType (current, previous) {
+      taskType(current, previous) {
         if (this.visible && previous === ADD_TASK_TYPE.URI) {
           return
         }
@@ -230,7 +298,7 @@
           }, 50)
         }
       },
-      visible (current) {
+      visible(current) {
         if (current === true) {
           document.addEventListener('keydown', this.handleHotkey)
         } else {
@@ -239,7 +307,63 @@
       }
     },
     methods: {
-      autofillResourceLink () {
+      async handleCurrentChange(val) {
+        if (val["isdir"] !== 0) {
+          this.currentRow = ''
+          this.$refs.baiduYunTable.setCurrentRow();
+        } else {
+          this.currentRow = val;
+          this.tableLoading = true
+          this.form.uris = await getDownloadAddress({
+            fs_id: val.fs_id,
+            timestamp: this.baiduYunData.timestamp,
+            sign: this.baiduYunData.sign,
+            randsk: encodeURIComponent(this.baiduYunData.randsk),
+            share_id: this.baiduYunData.shareid,
+            uk: this.baiduYunData.uk,
+            share: this.baiduYun.url,
+            pwd: this.baiduYun.code
+          })
+          this.tableLoading = false
+          this.form.userAgent = 'netdisk;7.0.5.9;WindowsBaiduYunGuanJia'
+          this.$msg.success('加载完毕')
+        }
+      },
+      async getFile() {
+        this.tableLoading = true
+        let a = await getFilePath(this.baiduYun.url, this.baiduYun.code)
+        if (a) {
+          this.tableLoading = false
+        }
+        if (a.code === 1) {
+          this.$msg({
+            type: 'warning',
+            message: a.msg,
+            duration: 6000
+          })
+          return;
+        }
+        this.baiduYunData = a
+        if (a['file_list'] && a['file_list']['errno'] === 0) {
+          this.baiduYunList = a['file_list']['list'];
+          // for (let file in list) {
+          //   if (file["isdir"] === 0) {
+          //     //(https)(.+?)(CookieBDUSS)
+          //     // confirmdl(number_format($file["fs_id"], 0, '', ''),$timestamp,$sign,urlencode($randsk),$shareid,$uk,$bdstoken,$file["size"])
+          //   } else {
+          //     // OpenDir($file["path"],$pwd ,$shareid,$uk, $surl_1, urlencode($randsk));
+          //   }
+          //
+          // }
+        } else {
+          this.$msg({
+            type: 'warning',
+            message: '获取文件信息失败或链接失效！',
+            duration: 6000
+          })
+        }
+      },
+      autofillResourceLink() {
         const content = this.$electron.clipboard.readText()
         const hasResource = detectResource(content)
         if (!hasResource) {
@@ -249,7 +373,7 @@
           this.form.uris = content
         }
       },
-      handleOpen () {
+      handleOpen() {
         this.form = initTaskForm(this.$store.state)
         if (this.taskType === ADD_TASK_TYPE.URI) {
           this.autofillResourceLink()
@@ -258,36 +382,36 @@
           }, 50)
         }
       },
-      handleOpened () {
+      handleOpened() {
         this.detectThunderResource(this.form.uris)
       },
-      handleCancel (formName) {
+      handleCancel(formName) {
         this.$store.dispatch('app/hideAddTaskDialog')
       },
-      handleClose (done) {
+      handleClose(done) {
         this.$store.dispatch('app/hideAddTaskDialog')
         this.$store.dispatch('app/updateAddTaskOptions', {})
       },
-      handleClosed () {
+      handleClosed() {
         this.reset()
       },
-      handleHotkey (event) {
+      handleHotkey(event) {
         if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
           event.preventDefault()
 
           this.submitForm('taskForm')
         }
       },
-      handleTabClick (tab, event) {
+      handleTabClick(tab, event) {
         this.$store.dispatch('app/changeAddTaskType', tab.name)
       },
-      handleUriPaste () {
+      handleUriPaste() {
         setImmediate(() => {
           const uris = this.$refs.uri.value
           this.detectThunderResource(uris)
         })
       },
-      detectThunderResource (uris = '') {
+      detectThunderResource(uris = '') {
         if (uris.includes('thunder://')) {
           this.$msg({
             type: 'warning',
@@ -296,18 +420,18 @@
           })
         }
       },
-      handleTorrentChange (torrent, selectedFileIndex) {
+      handleTorrentChange(torrent, selectedFileIndex) {
         this.form.torrent = torrent
         this.form.selectFile = selectedFileIndex
       },
-      onDirectorySelected (dir) {
+      onDirectorySelected(dir) {
         this.form.dir = dir
       },
-      reset () {
+      reset() {
         this.showAdvanced = false
         this.form = initTaskForm(this.$store.state)
       },
-      addTask (type, form) {
+      addTask(type, form) {
         let payload = null
         if (type === ADD_TASK_TYPE.URI) {
           payload = buildUriPayload(form)
@@ -320,12 +444,29 @@
             this.$msg.error(err.message)
           })
         } else if (type === 'metalink') {
-        // @TODO addMetalink
+          // @TODO addMetalink
         } else {
           console.error('addTask fail', form)
         }
       },
-      submitForm (formName) {
+      submitForm(formName) {
+        if (this.type === ADD_TASK_TYPE.BAIDU) {
+          try {
+            this.addTask(ADD_TASK_TYPE.URI, this.form)
+            this.$store.dispatch('app/hideAddTaskDialog')
+            if (this.form.newTaskShowDownloading) {
+              this.$router.push({
+                path: '/task/active'
+              }).catch(err => {
+                console.log(err)
+              })
+            }
+          } catch (err) {
+            this.$msg.error(this.$t(err.message))
+          }
+
+          return;
+        }
         this.$refs[formName].validate(valid => {
           if (!valid) {
             return false
@@ -352,44 +493,53 @@
 </script>
 
 <style lang="scss">
-.el-dialog.add-task-dialog {
-  max-width: 632px;
-  min-width: 380px;
-  .task-advanced-options .el-form-item:last-of-type {
-    margin-bottom: 0;
-  }
-  .el-tabs__header {
-    user-select: none;
-  }
-  .el-input-number.el-input-number--mini {
-    width: 100%;
-  }
-  .help-link {
-    font-size: 12px;
-    line-height: 14px;
-    padding-top: 7px;
-    > a {
-      color: #909399;
+  .el-dialog.add-task-dialog {
+    max-width: 632px;
+    min-width: 380px;
+
+    .task-advanced-options .el-form-item:last-of-type {
+      margin-bottom: 0;
     }
-  }
-  .el-dialog__footer {
-    padding-top: 20px;
-    background-color: $--add-task-dialog-footer-background;
-    border-radius: 0 0 5px 5px;
-  }
-  .dialog-footer {
-    .chk {
-      float: left;
-      line-height: 28px;
-      &.el-checkbox {
-        & .el-checkbox__input {
-          line-height: 19px;
-        }
-        & .el-checkbox__label {
-          padding-left: 6px;
+
+    .el-tabs__header {
+      user-select: none;
+    }
+
+    .el-input-number.el-input-number--mini {
+      width: 100%;
+    }
+
+    .help-link {
+      font-size: 12px;
+      line-height: 14px;
+      padding-top: 7px;
+
+      > a {
+        color: #909399;
+      }
+    }
+
+    .el-dialog__footer {
+      padding-top: 20px;
+      background-color: $--add-task-dialog-footer-background;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .dialog-footer {
+      .chk {
+        float: left;
+        line-height: 28px;
+
+        &.el-checkbox {
+          & .el-checkbox__input {
+            line-height: 19px;
+          }
+
+          & .el-checkbox__label {
+            padding-left: 6px;
+          }
         }
       }
     }
   }
-}
 </style>

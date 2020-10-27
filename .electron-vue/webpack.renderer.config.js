@@ -39,17 +39,17 @@ let rendererConfig = {
           options: { name: '[name].js' }
         }
       },
-      {
-        test: /\.(js|vue)$/,
-        enforce: 'pre',
-        exclude: /node_modules/,
-        use: {
-          loader: 'eslint-loader',
-          options: {
-            formatter: require('eslint-friendly-formatter')
-          }
-        }
-      },
+      // {
+      //   test: /\.(js|vue)$/,
+      //   enforce: 'pre',
+      //   exclude: /node_modules/,
+      //   use: {
+      //     loader: 'eslint-loader',
+      //     options: {
+      //       formatter: require('eslint-friendly-formatter')
+      //     }
+      //   }
+      // },
       {
         test: /\.scss$/,
         use: [

@@ -13,7 +13,8 @@ const defaultBrowserOptions = {
   height: 768,
   webPreferences: {
     nodeIntegration: true,
-    webviewTag: true
+    webviewTag: true,
+    webSecurity: false
   }
 }
 
