@@ -1,13 +1,13 @@
-import { EventEmitter } from 'events'
-import { app, shell, dialog, ipcMain } from 'electron'
+import {EventEmitter} from 'events'
+import {app, dialog, ipcMain, session, shell} from 'electron'
 import is from 'electron-is'
-import { readFile } from 'fs'
-import { extname, basename } from 'path'
-import { isEmpty } from 'lodash'
+import {readFile} from 'fs'
+import {basename, extname} from 'path'
+import {isEmpty} from 'lodash'
 
 import logger from './core/Logger'
 import ConfigManager from './core/ConfigManager'
-import { setupLocaleManager } from './ui/Locale'
+import {setupLocaleManager} from './ui/Locale'
 import Engine from './core/Engine'
 import EngineClient from './core/EngineClient'
 import UPnPManager from './core/UPnPManager'
@@ -21,25 +21,18 @@ import TouchBarManager from './ui/TouchBarManager'
 import TrayManager from './ui/TrayManager'
 import DockManager from './ui/DockManager'
 import ThemeManager from './ui/ThemeManager'
-import {
-  APP_RUN_MODE,
-  AUTO_SYNC_TRACKER_INTERVAL,
-  AUTO_CHECK_UPDATE_INTERVAL
-} from '@shared/constants'
-import { checkIsNeedRun } from '@shared/utils'
-import {
-  convertTrackerDataToComma,
-  fetchBtTrackerFromSource
-} from '@shared/utils/tracker'
+import {APP_RUN_MODE, AUTO_CHECK_UPDATE_INTERVAL, AUTO_SYNC_TRACKER_INTERVAL} from '@shared/constants'
+import {checkIsNeedRun} from '@shared/utils'
+import {convertTrackerDataToComma, fetchBtTrackerFromSource} from '@shared/utils/tracker'
 
 export default class Application extends EventEmitter {
-  constructor () {
+  constructor() {
     super()
     this.isReady = false
     this.init()
   }
 
-  init () {
+  init() {
     this.configManager = new ConfigManager()
 
     this.locale = this.configManager.getLocale()
@@ -83,12 +76,12 @@ export default class Application extends EventEmitter {
     this.emit('application:initialized')
   }
 
-  setupApplicationMenu () {
+  setupApplicationMenu() {
     this.menuManager = new MenuManager()
     this.menuManager.setup(this.locale)
   }
 
-  adjustMenu () {
+  adjustMenu() {
     if (is.mas()) {
       const visibleStates = {
         'app.check-for-updates': false,
@@ -99,7 +92,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  startEngine () {
+  startEngine() {
     const self = this
 
     try {
@@ -109,11 +102,11 @@ export default class Application extends EventEmitter {
       })
       this.engine.start()
     } catch (err) {
-      const { message } = err
+      const {message} = err
       dialog.showMessageBox({
         type: 'error',
         title: this.i18n.t('app.system-error-title'),
-        message: this.i18n.t('app.system-error-message', { message })
+        message: this.i18n.t('app.system-error-message', {message})
       }).then(_ => {
         setTimeout(() => {
           self.quit()
@@ -122,9 +115,9 @@ export default class Application extends EventEmitter {
     }
   }
 
-  async stopEngine () {
+  async stopEngine() {
     try {
-      await this.engineClient.shutdown({ force: true })
+      await this.engineClient.shutdown({force: true})
       setImmediate(() => {
         this.engine.stop()
       })
@@ -134,7 +127,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  initEngineClient () {
+  initEngineClient() {
     const port = this.configManager.getSystemConfig('rpc-listen-port')
     const secret = this.configManager.getSystemConfig('rpc-secret')
     this.engineClient = new EngineClient({
@@ -143,7 +136,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  initTrayManager () {
+  initTrayManager() {
     this.trayManager = new TrayManager({
       theme: this.configManager.getUserConfig('tray-theme'),
       systemTheme: this.themeManager.getSystemTheme(),
@@ -152,12 +145,12 @@ export default class Application extends EventEmitter {
 
     this.watchTraySpeedometerEnabledChange()
 
-    this.trayManager.on('mouse-down', ({ focused }) => {
-      this.sendCommandToAll('application:update-tray-focused', { focused })
+    this.trayManager.on('mouse-down', ({focused}) => {
+      this.sendCommandToAll('application:update-tray-focused', {focused})
     })
 
-    this.trayManager.on('mouse-up', ({ focused }) => {
-      this.sendCommandToAll('application:update-tray-focused', { focused })
+    this.trayManager.on('mouse-up', ({focused}) => {
+      this.sendCommandToAll('application:update-tray-focused', {focused})
     })
 
     this.trayManager.on('drop-files', (files = []) => {
@@ -169,20 +162,20 @@ export default class Application extends EventEmitter {
     })
   }
 
-  watchTraySpeedometerEnabledChange () {
+  watchTraySpeedometerEnabledChange() {
     this.configManager.userConfig.onDidChange('tray-speedometer', async (newValue, oldValue) => {
       logger.info('[Motrix] detected tray speedometer value change event:', newValue, oldValue)
       this.trayManager.handleSpeedometerEnableChange(newValue)
     })
   }
 
-  initDockManager () {
+  initDockManager() {
     this.dockManager = new DockManager({
       runMode: this.configManager.getUserConfig('run-mode')
     })
   }
 
-  initUPnPManager () {
+  initUPnPManager() {
     this.upnp = new UPnPManager()
 
     this.watchUPnPEnabledChange()
@@ -197,7 +190,7 @@ export default class Application extends EventEmitter {
     this.startUPnPMapping()
   }
 
-  async startUPnPMapping () {
+  async startUPnPMapping() {
     const btPort = this.configManager.getSystemConfig('listen-port')
     const dhtPort = this.configManager.getSystemConfig('dht-listen-port')
 
@@ -212,7 +205,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  async stopUPnPMapping () {
+  async stopUPnPMapping() {
     const btPort = this.configManager.getSystemConfig('listen-port')
     const dhtPort = this.configManager.getSystemConfig('dht-listen-port')
 
@@ -227,7 +220,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  watchUPnPPortsChange () {
+  watchUPnPPortsChange() {
     const watchKeys = ['listen-port', 'dht-listen-port']
 
     watchKeys.map((key) => {
@@ -251,7 +244,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  watchUPnPEnabledChange () {
+  watchUPnPEnabledChange() {
     this.configManager.userConfig.onDidChange('enable-upnp', async (newValue, oldValue) => {
       logger.info('[Motrix] detected enable-upnp value change event:', newValue, oldValue)
       if (newValue) {
@@ -263,7 +256,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  async shutdownUPnPManager () {
+  async shutdownUPnPManager() {
     const enable = this.configManager.getUserConfig('enable-upnp')
     if (enable) {
       await this.stopUPnPMapping()
@@ -272,7 +265,7 @@ export default class Application extends EventEmitter {
     this.upnp.closeClient()
   }
 
-  autoSyncTracker () {
+  autoSyncTracker() {
     const enable = this.configManager.getUserConfig('auto-sync-tracker')
     const lastTime = this.configManager.getUserConfig('last-sync-tracker-time')
     const result = checkIsNeedRun(enable, lastTime, AUTO_SYNC_TRACKER_INTERVAL)
@@ -300,7 +293,7 @@ export default class Application extends EventEmitter {
     }, 500)
   }
 
-  autoResumeTask () {
+  autoResumeTask() {
     const enabled = this.configManager.getUserConfig('resume-all-when-app-launched')
     if (!enabled) {
       return
@@ -309,7 +302,7 @@ export default class Application extends EventEmitter {
     this.engineClient.call('unpauseAll')
   }
 
-  initWindowManager () {
+  initWindowManager() {
     this.windowManager = new WindowManager({
       userConfig: this.configManager.getUserConfig()
     })
@@ -338,14 +331,14 @@ export default class Application extends EventEmitter {
     })
   }
 
-  storeWindowState (data = {}) {
+  storeWindowState(data = {}) {
     const enabled = this.configManager.getUserConfig('keep-window-state')
     if (!enabled) {
       return
     }
 
     const state = this.configManager.getUserConfig('window-state', {})
-    const { page, bounds } = data
+    const {page, bounds} = data
     const newState = {
       ...state,
       [page]: bounds
@@ -353,7 +346,7 @@ export default class Application extends EventEmitter {
     this.configManager.setUserConfig('window-state', newState)
   }
 
-  start (page, options = {}) {
+  start(page, options = {}) {
     const win = this.showPage(page, options)
 
     win.once('ready-to-show', () => {
@@ -365,19 +358,19 @@ export default class Application extends EventEmitter {
     }
   }
 
-  showPage (page, options = {}) {
-    const { openedAtLogin } = options
+  showPage(page, options = {}) {
+    const {openedAtLogin} = options
     const autoHideWindow = this.configManager.getUserConfig('auto-hide-window')
     return this.windowManager.openWindow(page, {
       hidden: openedAtLogin || autoHideWindow
     })
   }
 
-  show (page = 'index') {
+  show(page = 'index') {
     this.windowManager.showWindow(page)
   }
 
-  hide (page) {
+  hide(page) {
     if (page) {
       this.windowManager.hideWindow(page)
     } else {
@@ -385,15 +378,15 @@ export default class Application extends EventEmitter {
     }
   }
 
-  toggle (page = 'index') {
+  toggle(page = 'index') {
     this.windowManager.toggleWindow(page)
   }
 
-  closePage (page) {
+  closePage(page) {
     this.windowManager.destroyWindow(page)
   }
 
-  async stop () {
+  async stop() {
     try {
       await this.shutdownUPnPManager()
 
@@ -407,12 +400,12 @@ export default class Application extends EventEmitter {
     }
   }
 
-  async quit () {
+  async quit() {
     await this.stop()
     app.exit()
   }
 
-  sendCommand (command, ...args) {
+  sendCommand(command, ...args) {
     if (!this.emit(command, ...args)) {
       const window = this.windowManager.getFocusedWindow()
       if (window) {
@@ -421,7 +414,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  sendCommandToAll (command, ...args) {
+  sendCommandToAll(command, ...args) {
     if (!this.emit(command, ...args)) {
       this.windowManager.getWindowList().forEach(window => {
         this.windowManager.sendCommandTo(window, command, ...args)
@@ -429,21 +422,21 @@ export default class Application extends EventEmitter {
     }
   }
 
-  sendMessageToAll (channel, ...args) {
+  sendMessageToAll(channel, ...args) {
     this.windowManager.getWindowList().forEach(window => {
       this.windowManager.sendMessageTo(window, channel, ...args)
     })
   }
 
-  initThemeManager () {
+  initThemeManager() {
     this.themeManager = new ThemeManager()
     this.themeManager.on('system-theme-change', (theme) => {
       this.trayManager.handleSystemThemeChange(theme)
-      this.sendCommandToAll('application:update-system-theme', { theme })
+      this.sendCommandToAll('application:update-system-theme', {theme})
     })
   }
 
-  initTouchBarManager () {
+  initTouchBarManager() {
     if (!is.macOS()) {
       return
     }
@@ -451,20 +444,20 @@ export default class Application extends EventEmitter {
     this.touchBarManager = new TouchBarManager()
   }
 
-  initProtocolManager () {
+  initProtocolManager() {
     const protocols = this.configManager.getUserConfig('protocols', {})
     this.protocolManager = new ProtocolManager({
       protocols
     })
   }
 
-  handleProtocol (url) {
+  handleProtocol(url) {
     this.show()
 
     this.protocolManager.handle(url)
   }
 
-  handleFile (filePath) {
+  handleFile(filePath) {
     if (!filePath) {
       return
     }
@@ -489,7 +482,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  initUpdaterManager () {
+  initUpdaterManager() {
     if (is.mas()) {
       return
     }
@@ -502,7 +495,7 @@ export default class Application extends EventEmitter {
     this.handleUpdaterEvents()
   }
 
-  handleUpdaterEvents () {
+  handleUpdaterEvents() {
     this.updateManager.on('checking', (event) => {
       this.menuManager.updateMenuItemEnabledState('app.check-for-updates', false)
       this.trayManager.updateMenuItemEnabledState('app.check-for-updates', false)
@@ -536,15 +529,15 @@ export default class Application extends EventEmitter {
     })
   }
 
-  relaunch () {
+  relaunch() {
     this.stop()
     app.relaunch()
     app.exit()
   }
 
-  savePreference (config = {}) {
+  savePreference(config = {}) {
     logger.info('[Motrix] save preference:', config)
-    const { system, user } = config
+    const {system, user} = config
     if (!isEmpty(system)) {
       console.info('[Motrix] main save system config: ', system)
       this.configManager.setSystemConfig(system)
@@ -557,7 +550,7 @@ export default class Application extends EventEmitter {
     }
   }
 
-  handleCommands () {
+  handleCommands() {
     this.on('application:save-preference', this.savePreference)
 
     this.on('application:update-tray', (tray) => {
@@ -584,11 +577,11 @@ export default class Application extends EventEmitter {
       }
     })
 
-    this.on('application:show', ({ page }) => {
+    this.on('application:show', ({page}) => {
       this.show(page)
     })
 
-    this.on('application:hide', ({ page }) => {
+    this.on('application:hide', ({page}) => {
       this.hide(page)
     })
 
@@ -603,7 +596,7 @@ export default class Application extends EventEmitter {
 
     this.on('application:change-theme', (theme) => {
       this.themeManager.updateAppAppearance(theme)
-      this.sendCommandToAll('application:update-theme', { theme })
+      this.sendCommandToAll('application:update-theme', {theme})
     })
 
     this.on('application:change-locale', (locale) => {
@@ -646,7 +639,7 @@ export default class Application extends EventEmitter {
             extensions: ['torrent']
           }
         ]
-      }).then(({ canceled, filePaths }) => {
+      }).then(({canceled, filePaths}) => {
         if (canceled || filePaths.length === 0) {
           return
         }
@@ -687,13 +680,22 @@ export default class Application extends EventEmitter {
       const url = 'https://motrix.app/report'
       shell.openExternal(url)
     })
+
+    this.on('session:set-cookie', (url, key, val) => {
+      session.defaultSession.cookies.remove(url, key).then(r => {
+
+      })
+      session.defaultSession.cookies.set({url: url, name: key, value: val}).then(() => {
+        // ignore
+      })
+    })
   }
 
-  handleConfigChange (configName) {
-    this.sendCommandToAll('application:update-preference-config', { configName })
+  handleConfigChange(configName) {
+    this.sendCommandToAll('application:update-preference-config', {configName})
   }
 
-  handleEvents () {
+  handleEvents() {
     this.once('application:initialized', () => {
       this.autoSyncTracker()
 
@@ -724,7 +726,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  handleIpcMessages () {
+  handleIpcMessages() {
     ipcMain.on('command', (event, command, ...args) => {
       logger.log('[Motrix] ipc receive command', command, ...args)
       this.emit(command, ...args)
@@ -736,7 +738,7 @@ export default class Application extends EventEmitter {
     })
   }
 
-  handleIpcInvokes () {
+  handleIpcInvokes() {
     ipcMain.handle('get-app-config', async () => {
       const systemConfig = this.configManager.getSystemConfig()
       const userConfig = this.configManager.getUserConfig()

@@ -81,6 +81,9 @@
                     prop="size"
                     label="大小"
                     width="100">
+                    <template slot-scope="scope">
+                      {{scope.row.size ? scope.row.size : '-'}}
+                    </template>
                   </el-table-column>
                   <el-table-column
                     prop="md5"
@@ -239,7 +242,7 @@
   import {ADD_TASK_TYPE} from '@shared/constants'
   import {detectResource} from '@shared/utils'
   import '@/components/Icons/inbox'
-  import {getDownloadAddress, getFilePath} from '../../../shared/utils/baiduyun'
+  import {getDir, getDownloadAddress, getFilePath} from '../../../shared/utils/baiduyun'
 
   export default {
     name: 'mo-add-task',
@@ -264,6 +267,7 @@
         form: {},
         rules: {},
         baiduYun: {
+          surl: '',
           url: '',
           code: ''
         },
@@ -309,6 +313,18 @@
     methods: {
       async handleCurrentChange(val) {
         if (val["isdir"] !== 0) {
+          this.tableLoading = true
+          let res = await getDir(this.baiduYunData.shareid, this.baiduYunData.uk, val["path"])
+          this.tableLoading = false
+          if (res.code === 1) {
+            this.$msg({
+              type: 'warning',
+              message: a.msg,
+              duration: 6000
+            })
+            return;
+          }
+          this.baiduYunList = res
           this.currentRow = ''
           this.$refs.baiduYunTable.setCurrentRow();
         } else {
@@ -321,17 +337,44 @@
             randsk: encodeURIComponent(this.baiduYunData.randsk),
             share_id: this.baiduYunData.shareid,
             uk: this.baiduYunData.uk,
-            share: this.baiduYun.url,
+            share: this.baiduYun.surl,
             pwd: this.baiduYun.code
           })
           this.tableLoading = false
+          this.form.out = this.currentRow.server_filename
           this.form.userAgent = 'netdisk;7.0.5.9;WindowsBaiduYunGuanJia'
-          this.$msg.success('加载完毕')
+          this.submitForm('taskForm')
         }
       },
       async getFile() {
+        let link = this.baiduYun.url
+        if (link == null || link === "") {
+          this.$msg({
+            type: 'warning',
+            message: '请输入链接',
+            duration: 6000
+          })
+          return;
+        }
+
+        let surl = link.match(/surl=([A-Za-z0-9-_]+)/);
+        if (surl == null) {
+          surl = link.match(/1[A-Za-z0-9-_]+/);
+          if (surl == null) {
+            this.$msg({
+              type: 'warning',
+              message: '分享链接填写有误，请检查',
+              duration: 6000
+            })
+          } else {
+            surl = surl[0];
+          }
+        } else {
+          surl = "1" + surl[1];
+        }
+        this.baiduYun.surl = ("" + surl).substring(1)
         this.tableLoading = true
-        let a = await getFilePath(this.baiduYun.url, this.baiduYun.code)
+        let a = await getFilePath(this.baiduYun.surl, this.baiduYun.code, this.$electron.session)
         if (a) {
           this.tableLoading = false
         }
@@ -346,15 +389,6 @@
         this.baiduYunData = a
         if (a['file_list'] && a['file_list']['errno'] === 0) {
           this.baiduYunList = a['file_list']['list'];
-          // for (let file in list) {
-          //   if (file["isdir"] === 0) {
-          //     //(https)(.+?)(CookieBDUSS)
-          //     // confirmdl(number_format($file["fs_id"], 0, '', ''),$timestamp,$sign,urlencode($randsk),$shareid,$uk,$bdstoken,$file["size"])
-          //   } else {
-          //     // OpenDir($file["path"],$pwd ,$shareid,$uk, $surl_1, urlencode($randsk));
-          //   }
-          //
-          // }
         } else {
           this.$msg({
             type: 'warning',
@@ -375,6 +409,15 @@
       },
       handleOpen() {
         this.form = initTaskForm(this.$store.state)
+        this.baiduYun = {
+          surl: '',
+          url: '',
+          code: ''
+        };
+        this.baiduYunList = [];
+        this.currentRow = '';
+        this.tableLoading = false;
+        this.baiduYunData = '';
         if (this.taskType === ADD_TASK_TYPE.URI) {
           this.autofillResourceLink()
           setTimeout(() => {
@@ -452,7 +495,8 @@
       submitForm(formName) {
         if (this.type === ADD_TASK_TYPE.BAIDU) {
           try {
-            this.addTask(ADD_TASK_TYPE.URI, this.form)
+            this.addTask(ADD_TASK_TYPE.URI, {...this.form})
+            this.form = {}
             this.$store.dispatch('app/hideAddTaskDialog')
             if (this.form.newTaskShowDownloading) {
               this.$router.push({

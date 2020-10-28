@@ -23,12 +23,10 @@
     "build:web": "cross-env BUILD_TARGET=web node .electron-vue/build.js",
     "dev": "node .electron-vue/dev-runner.js",
     "dev:renderer": "webpack-dev-server --hot --colors --config .electron-vue/webpack.renderer.config.js --port 9080 --content-base app/dist",
-    "lint": "eslint --ext .js,.vue -f ./node_modules/eslint-friendly-formatter src",
-    "lint:fix": "eslint --ext .js,.vue -f ./node_modules/eslint-friendly-formatter --fix src",
     "pack": "npm run pack:main && npm run pack:renderer",
     "pack:main": "cross-env NODE_ENV=production webpack --mode production --progress --colors --config .electron-vue/webpack.main.config.js",
     "pack:renderer": "cross-env NODE_ENV=production webpack --mode production --progress --colors --config .electron-vue/webpack.renderer.config.js",
-    "postinstall": "electron-builder install-app-deps && npm run lint:fix"
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "productName": "Motrix",
@@ -227,7 +225,7 @@
     "del": "^5.1.0",
     "devtron": "^1.4.0",
     "electron": "^9.0.4",
-    "electron-builder": "^22.7.0",
+    "electron-builder": "^22.9.1",
     "electron-builder-notarize": "^1.1.2",
     "electron-devtools-installer": "^3.0.0",
     "electron-notarize": "^1.0.0",

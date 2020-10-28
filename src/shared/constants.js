@@ -103,7 +103,7 @@ export const AUTO_CHECK_UPDATE_INTERVAL = ONE_DAY * 7
 export const NONE_SELECTED_FILES = 'none'
 export const SELECTED_ALL_FILES = 'all'
 
-export const ENGINE_MAX_CONNECTION_PER_SERVER = 256
+export const ENGINE_MAX_CONNECTION_PER_SERVER = 64
 
 export const IP_VERSION = {
   V4: 4,
@@ -113,7 +113,7 @@ export const IP_VERSION = {
 export const LOGIN_SETTING_OPTIONS = {
   // For Windows
   args: [
-    '--opened-at-login=1'
+    '--opened-at-loginnet::ERR_CERT_INVALID=1'
   ]
 }
 
