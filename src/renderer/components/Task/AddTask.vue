@@ -267,9 +267,9 @@
         form: {},
         rules: {},
         baiduYun: {
-          surl: 'p8cPnuOE6YEOiaj3JUVTjA',
-          url: 'https://pan.baidu.com/s/1p8cPnuOE6YEOiaj3JUVTjA',
-          code: 'wrzg'
+          surl: '',
+          url: '',
+          code: ''
         },
         baiduYunList: [],
         currentRow: '',
@@ -412,9 +412,9 @@
       handleOpen() {
         this.form = initTaskForm(this.$store.state)
         this.baiduYun = {
-          surl: 'p8cPnuOE6YEOiaj3JUVTjA',
-          url: 'https://pan.baidu.com/s/1p8cPnuOE6YEOiaj3JUVTjA',
-          code: 'wrzg'
+          surl: '',
+          url: '',
+          code: ''
         };
         this.baiduYunList = [];
         this.currentRow = '';

@@ -74,7 +74,6 @@ export async function getDownloadUrl({fs_id, timestamp, sign, randsk, share_id, 
     sign = (sign = json.match(/&sign=.*?&/)[0]).substring(6, sign.length - 1)
     return sign
   } catch (e) {
-
   }
 }
 
@@ -89,6 +88,6 @@ export async function getDownloadAddress({fs_id, timestamp, sign, randsk, share_
     },
   })).text()).match(/(https)(.+?)(<\/b>)/)[0]
 
-  return a.substring(0, a.length-4);
+  return a.substring(0, a.length - 4);
 
 }
