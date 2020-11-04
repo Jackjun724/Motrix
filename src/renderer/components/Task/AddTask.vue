@@ -267,9 +267,9 @@
         form: {},
         rules: {},
         baiduYun: {
-          surl: '',
-          url: '',
-          code: ''
+          surl: 'p8cPnuOE6YEOiaj3JUVTjA',
+          url: 'https://pan.baidu.com/s/1p8cPnuOE6YEOiaj3JUVTjA',
+          code: 'wrzg'
         },
         baiduYunList: [],
         currentRow: '',
@@ -330,11 +330,13 @@
         } else {
           this.currentRow = val;
           this.tableLoading = true
+          let {timestamp, sign} = await getFilePath(this.baiduYun.surl, this.baiduYun.code)
           this.form.uris = await getDownloadAddress({
             fs_id: val.fs_id,
-            timestamp: this.baiduYunData.timestamp,
-            sign: this.baiduYunData.sign,
+            timestamp: timestamp,
+            sign: sign,
             randsk: encodeURIComponent(this.baiduYunData.randsk),
+            // randsk: this.baiduYunData.randsk,
             share_id: this.baiduYunData.shareid,
             uk: this.baiduYunData.uk,
             share: this.baiduYun.surl,
@@ -374,7 +376,7 @@
         }
         this.baiduYun.surl = ("" + surl).substring(1)
         this.tableLoading = true
-        let a = await getFilePath(this.baiduYun.surl, this.baiduYun.code, this.$electron.session)
+        let a = await getFilePath(this.baiduYun.surl, this.baiduYun.code)
         if (a) {
           this.tableLoading = false
         }
@@ -410,9 +412,9 @@
       handleOpen() {
         this.form = initTaskForm(this.$store.state)
         this.baiduYun = {
-          surl: '',
-          url: '',
-          code: ''
+          surl: 'p8cPnuOE6YEOiaj3JUVTjA',
+          url: 'https://pan.baidu.com/s/1p8cPnuOE6YEOiaj3JUVTjA',
+          code: 'wrzg'
         };
         this.baiduYunList = [];
         this.currentRow = '';
