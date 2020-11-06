@@ -344,7 +344,7 @@
           if (res.code === 0) {
             this.form.uris = res.data
             this.form.out = this.currentRow.server_filename
-            this.form.userAgent = 'netdisk;7.0.5.9;WindowsBaiduYunGuanJia'
+            this.form.userAgent = 'netdisk;2.2.51.6;netdisk;10.0.63;PC;android-android'
             this.submitForm('taskForm')
             this.$msg({
               type: 'success',
