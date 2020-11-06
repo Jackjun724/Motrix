@@ -434,7 +434,7 @@
         this.tableLoading = false;
         this.baiduYunData = '';
         const content = this.$electron.clipboard.readText()
-        if (content.trim().indexOf("https;//pan.baidu.com")===0) {
+        if (content.trim().indexOf("https://pan.baidu.com")===0) {
           this.taskType === ADD_TASK_TYPE.BAIDU;
           this.baiduYun.url = content;
         } else if (this.taskType === ADD_TASK_TYPE.URI) {
