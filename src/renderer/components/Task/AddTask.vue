@@ -242,7 +242,7 @@
   import {ADD_TASK_TYPE} from '@shared/constants'
   import {detectResource} from '@shared/utils'
   import '@/components/Icons/inbox'
-  import {getDir, getDownloadAddress, getFilePath} from '../../../shared/utils/baiduyun'
+  import {getDir, getDownloadUrl, getFilePath} from '../../../shared/utils/baiduyun'
 
   export default {
     name: 'mo-add-task',
@@ -331,21 +331,34 @@
           this.currentRow = val;
           this.tableLoading = true
           let {timestamp, sign} = await getFilePath(this.baiduYun.surl, this.baiduYun.code)
-          this.form.uris = await getDownloadAddress({
+          let res = await getDownloadUrl({
             fs_id: val.fs_id,
             timestamp: timestamp,
             sign: sign,
-            randsk: encodeURIComponent(this.baiduYunData.randsk),
-            // randsk: this.baiduYunData.randsk,
+            randsk: this.baiduYunData.randsk,
             share_id: this.baiduYunData.shareid,
             uk: this.baiduYunData.uk,
             share: this.baiduYun.surl,
             pwd: this.baiduYun.code
           })
+          if (res.code === 0) {
+            this.form.uris = res.data
+            this.form.out = this.currentRow.server_filename
+            this.form.userAgent = 'netdisk;7.0.5.9;WindowsBaiduYunGuanJia'
+            this.submitForm('taskForm')
+            this.$msg({
+              type: 'success',
+              message: '正在下载: ' + this.currentRow.server_filename,
+              duration: 6000
+            })
+          } else {
+            this.$msg({
+              type: 'warning',
+              message: res.message,
+              duration: 6000
+            })
+          }
           this.tableLoading = false
-          this.form.out = this.currentRow.server_filename
-          this.form.userAgent = 'netdisk;7.0.5.9;WindowsBaiduYunGuanJia'
-          this.submitForm('taskForm')
         }
       },
       async getFile() {
@@ -420,7 +433,11 @@
         this.currentRow = '';
         this.tableLoading = false;
         this.baiduYunData = '';
-        if (this.taskType === ADD_TASK_TYPE.URI) {
+        const content = this.$electron.clipboard.readText()
+        if (content.trim().indexOf("https;//pan.baidu.com")===0) {
+          this.taskType === ADD_TASK_TYPE.BAIDU;
+          this.baiduYun.url = content;
+        } else if (this.taskType === ADD_TASK_TYPE.URI) {
           this.autofillResourceLink()
           setTimeout(() => {
             this.$refs.uri && this.$refs.uri.focus()
