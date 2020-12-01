@@ -7,6 +7,7 @@
     @open="handleOpen"
     @opened="handleOpened"
     @closed="handleClosed"
+    v-loading="dialogLoading"
   >
     <el-form ref="taskForm" label-position="left" :model="form" :rules="rules">
       <el-tabs :value="type" @tab-click="handleTabClick">
@@ -92,6 +93,31 @@
                   </el-table-column>
                 </el-table>
               </el-col>
+              <template v-if="captchaShow">
+                <el-col :span="4" style="padding-top: 20px;">
+                  <img
+                    :src="captcha.url"
+                    @click="refreshCaptcha"
+                    alt="">
+                </el-col>
+                <el-col :span="16" style="margin-top: 20px">
+                  <el-form-item
+                    label="验证码："
+                    label-width="70px"
+                  >
+                    <el-input
+                      v-model="captcha.code"
+                      placeholder="验证码"
+                    >
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="4" style="padding-top: 20px;">
+                  <el-button @click="handlerPanDownload">
+                    继续
+                  </el-button>
+                </el-col>
+              </template>
             </el-row>
           </el-form-item>
         </el-tab-pane>
@@ -223,6 +249,7 @@
           <el-button
             type="primary"
             @click="submitForm('taskForm')"
+            v-if="this.type != baiduType"
           >
             {{$t('app.submit')}}
           </el-button>
@@ -262,10 +289,18 @@
     },
     data() {
       return {
+        baiduType: ADD_TASK_TYPE.BAIDU,
+        captchaShow: false,
         formLabelWidth: '100px',
         showAdvanced: false,
         form: {},
         rules: {},
+        captcha: {
+          rawUrl: '',
+          key: '',
+          url: '',
+          code: ''
+        },
         baiduYun: {
           surl: '',
           url: '',
@@ -275,6 +310,7 @@
         currentRow: '',
         tableLoading: false,
         baiduYunData: '',
+        dialogLoading: false,
       }
     },
     computed: {
@@ -312,9 +348,10 @@
     },
     methods: {
       async handleCurrentChange(val) {
+        if (!val) return
         if (val["isdir"] !== 0) {
           this.tableLoading = true
-          let res = await getDir(this.baiduYunData.shareid, this.baiduYunData.uk, val["path"])
+          let res = await getDir(this.baiduYunData.shareid, this.baiduYunData.uk, this.baiduYunData.randsk, val["path"])
           this.tableLoading = false
           if (res.code === 1) {
             this.$msg({
@@ -329,39 +366,66 @@
           this.$refs.baiduYunTable.setCurrentRow();
         } else {
           this.currentRow = val;
-          this.tableLoading = true
-          let {timestamp, sign} = await getFilePath(this.baiduYun.surl, this.baiduYun.code)
-          let res = await getDownloadUrl({
-            fs_id: val.fs_id,
-            timestamp: timestamp,
-            sign: sign,
-            randsk: this.baiduYunData.randsk,
-            share_id: this.baiduYunData.shareid,
-            uk: this.baiduYunData.uk,
-            share: this.baiduYun.surl,
-            pwd: this.baiduYun.code
-          })
-          if (res.code === 0) {
-            this.form.uris = res.data
-            this.form.out = this.currentRow.server_filename
-            this.form.userAgent = 'netdisk;2.2.51.6;netdisk;10.0.63;PC;android-android'
-            this.submitForm('taskForm')
-            this.$msg({
-              type: 'success',
-              message: '正在下载: ' + this.currentRow.server_filename,
-              duration: 6000
-            })
-          } else {
-            this.$msg({
-              type: 'warning',
-              message: res.message,
-              duration: 6000
-            })
-          }
-          this.tableLoading = false
+          this.handlerPanDownload(true);
         }
       },
+      refreshCaptcha() {
+        this.captcha.url = this.captcha.rawUrl + '&rand=' + parseInt(Math.random() * 100)
+      },
+      async handlerPanDownload(flag) {
+        if (!flag) {
+          this.dialogLoading = true
+        }
+        let val = this.currentRow
+        this.tableLoading = true
+        let res = await getDownloadUrl({
+          share_id: this.baiduYunData.shareid,
+          uk: this.baiduYunData.uk,
+          path: val.path,
+          pwd: this.baiduYun.code,
+          codeStr: this.captcha.key,
+          code: this.captcha.code
+        })
+        if (res.code === 0) {
+          this.form.uris = res.data.url
+          this.form.out = this.currentRow.server_filename
+          this.form.userAgent = res.data.ua
+          this.submitForm('taskForm')
+          this.$msg({
+            type: 'success',
+            message: '正在下载: ' + this.currentRow.server_filename,
+            duration: 6000
+          })
+          this.tableLoading = false
+          this.$refs.baiduYunTable.setCurrentRow();
+        } else if (res.code == -10) {
+          // 验证码
+          this.captcha.url = res.data.captchaUrl;
+          this.captcha.rawUrl = res.data.captchaUrl;
+          this.captcha.key = res.data.codeStr;
+          this.captchaShow = true;
+        } else {
+          this.$msg({
+            type: 'warning',
+            message: res.message,
+            duration: 6000
+          })
+          this.tableLoading = false
+          this.$refs.baiduYunTable.setCurrentRow();
+        }
+
+        if (!flag) {
+          this.dialogLoading = false
+        }
+
+      },
       async getFile() {
+        this.captcha = {
+          key: '',
+          url: '',
+          code: ''
+        }
+
         let link = this.baiduYun.url
         if (link == null || link === "") {
           this.$msg({
@@ -423,6 +487,7 @@
         }
       },
       handleOpen() {
+        this.captchaShow = false
         this.form = initTaskForm(this.$store.state)
         this.baiduYun = {
           surl: '',
@@ -434,7 +499,7 @@
         this.tableLoading = false;
         this.baiduYunData = '';
         const content = this.$electron.clipboard.readText()
-        if (content.trim().indexOf("https://pan.baidu.com")===0) {
+        if (content.trim().indexOf("https://pan.baidu.com") === 0) {
           this.taskType === ADD_TASK_TYPE.BAIDU;
           this.baiduYun.url = content;
         } else if (this.taskType === ADD_TASK_TYPE.URI) {
@@ -490,6 +555,7 @@
         this.form.dir = dir
       },
       reset() {
+        this.captchaShow = false
         this.showAdvanced = false
         this.form = initTaskForm(this.$store.state)
       },

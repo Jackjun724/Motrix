@@ -103,7 +103,7 @@ export default class WindowManager extends EventEmitter {
     // window.webContents.openDevTools()
 
     const filter = {
-      urls: ['https://*.baidu.com/*'],
+      urls: ['https://*.baidu.com/*','https://d.pcs.baidu.com/*'],
     };
 
     session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {

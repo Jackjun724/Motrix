@@ -7,9 +7,7 @@ export async function getFilePath(subUrl, code) {
     mode: 'no-cors',
     credentials: 'omit',
     headers: {
-      'User-Agent': 'netdisk',
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      'Cookie': ''
     },
   })).text())
 
@@ -22,7 +20,6 @@ export async function getFilePath(subUrl, code) {
         mode: 'no-cors',
         credentials: 'include',
         headers: {
-          'User-Agent': 'netdisk',
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         },
       })).text()
@@ -40,11 +37,11 @@ export async function getFilePath(subUrl, code) {
   }
 }
 
-export async function getDir(shareId, uk, path) {
-  const file = await (await fetch(`https://pan.baidu.com/share/list?uk=${uk}&shareid=${shareId}&order=other&desc=1&showempty=0&web=1&page=1&num=100&dir=${encodeURIComponent(path)}&channel=chunlei&web=1&app_id=250528&clienttype=0`, {
+export async function getDir(shareId, uk, randsk, path) {
+  const file = await (await fetch(`https://pan.baidu.com/share/list?sekey=${randsk}&uk=${uk}&shareid=${shareId}&order=other&desc=1&showempty=0&web=1&page=1&num=100&dir=${encodeURIComponent(path)}&channel=chunlei&web=1&app_id=250528&clienttype=0`, {
     method: 'GET',
     mode: 'no-cors',
-    credentials: 'include',
+    credentials: 'omit',
   })).text()
 
   let json = JSON.parse(file);
@@ -57,12 +54,13 @@ export async function getDir(shareId, uk, path) {
   return json.list;
 }
 
-export async function getDownloadUrl({fs_id, timestamp, sign, randsk, share_id, uk}) {
+export async function getDownloadUrl({ share_id, uk, path, pwd, codeStr, code}) {
+
   try {
-    return JSON.parse(await (await fetch(`http://api.disk.retzero.com/api/download/link?fsId=${fs_id}&timestamp=${timestamp}&sign=${sign}&randsk=${randsk}&shareId=${share_id}&uk=${uk}`, {
-      method: "GET",
+    return JSON.parse(await (await fetch(`http://api.disk.retzero.com/api/download/link?shareId=${share_id}&uk=${uk}&path=${path}&pwd=${pwd}&codeStr=${codeStr}&code=${code}`, {
+      method: 'GET',
       mode: 'no-cors',
-      credentials: 'omit'
+      credentials: 'omit',
     })).text())
   } catch (e) {
   }

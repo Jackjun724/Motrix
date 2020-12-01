@@ -181,6 +181,7 @@ export default class Api {
       const args = compactUndefined([[uri], engineOptions])
       return ['aria2.addUri', ...args]
     })
+    console.log(tasks)
     return this.client.multicall(tasks)
   }
 

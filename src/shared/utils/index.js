@@ -536,7 +536,7 @@ export function formatOptionsForEngine (options) {
 
   Object.keys(options).forEach((key) => {
     const kebabCaseKey = kebabCase(key)
-    result[kebabCaseKey] = `${options[key]}`
+    result[kebabCaseKey] = options[key]
   })
 
   return result

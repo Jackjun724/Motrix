@@ -38,9 +38,12 @@ export const initTaskForm = state => {
 }
 
 export const buildHeader = (form) => {
-  const { userAgent, referer, cookie } = form
+  const { userAgent, referer, cookie, range } = form
   const result = []
 
+  if (!isEmpty(range)) {
+    result.push(`Range: ${range}`)
+  }
   if (!isEmpty(userAgent)) {
     result.push(`User-Agent: ${userAgent}`)
   }
