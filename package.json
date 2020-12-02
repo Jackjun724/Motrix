@@ -171,10 +171,7 @@
     "publish": [
       {
         "provider": "generic",
-        "url": "https://dl.motrix.app/release/"
-      },
-      {
-        "provider": "github"
+        "url": "https://gitee.com/baidu_server/baidu-release/raw/master/"
       }
     ]
   },
