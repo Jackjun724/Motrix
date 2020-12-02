@@ -15,8 +15,8 @@ export async function getFilePath(subUrl, code) {
     const randsk = verify.randsk
     ipcRenderer.send('command', 'session:set-cookie', 'https://pan.baidu.com', 'BDCLND', randsk)
     if (randsk !== 1) {
-      const file = await (await fetch(`https://pan.baidu.com/s/1${subUrl}`, {
-        method: 'GET',
+      const file = await (await fetch(`https://pan.baidu.com/share/list?clienttype=5&showempty=0&page=1&num=100&shorturl=${subUrl}&root=1`, {
+        method: 'POST',
         mode: 'no-cors',
         credentials: 'include',
         headers: {
@@ -24,10 +24,9 @@ export async function getFilePath(subUrl, code) {
         },
       })).text()
 
-      let json = file.match(/yunData.setData\((\{.*?\})\);/)[1]
-      json = JSON.parse(json)
-      json['randsk'] = randsk
-      return json;
+      let a = JSON.parse(file);
+      a['randsk'] = randsk;
+      return a;
     }
   }
 
@@ -37,11 +36,12 @@ export async function getFilePath(subUrl, code) {
   }
 }
 
-export async function getDir(shareId, uk, randsk, path) {
-  const file = await (await fetch(`https://pan.baidu.com/share/list?sekey=${randsk}&uk=${uk}&shareid=${shareId}&order=other&desc=1&showempty=0&web=1&page=1&num=100&dir=${encodeURIComponent(path)}&channel=chunlei&web=1&app_id=250528&clienttype=0`, {
-    method: 'GET',
+export async function getDir(subUrl, randsk, path) {
+  ipcRenderer.send('command', 'session:set-cookie', 'https://pan.baidu.com', 'BDCLND', randsk)
+  const file = await (await fetch(`https://pan.baidu.com/share/list?clienttype=5&showempty=0&page=1&num=100&shorturl=${subUrl}&dir=${encodeURIComponent(path)}`, {
+    method: 'POST',
     mode: 'no-cors',
-    credentials: 'omit',
+    credentials: 'include',
   })).text()
 
   let json = JSON.parse(file);
@@ -57,7 +57,7 @@ export async function getDir(shareId, uk, randsk, path) {
 export async function getDownloadUrl({ share_id, uk, path, pwd, codeStr, code}) {
 
   try {
-    return JSON.parse(await (await fetch(`http://api.disk.retzero.com/api/download/link?shareId=${share_id}&uk=${uk}&path=${path}&pwd=${pwd}&codeStr=${codeStr}&code=${code}`, {
+    return JSON.parse(await (await fetch(`http://api.disk.retzero.com/api/download/link?shareId=${share_id}&uk=${uk}&path=${encodeURIComponent(path)}&pwd=${pwd}&codeStr=${codeStr}&code=${code}`, {
       method: 'GET',
       mode: 'no-cors',
       credentials: 'omit',

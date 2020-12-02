@@ -83,7 +83,7 @@
                     label="大小"
                     width="100">
                     <template slot-scope="scope">
-                      {{scope.row.size ? scope.row.size : '-'}}
+                      {{scope.row.isdir == 1 ? '-' : renderSize(scope.row.size)}}
                     </template>
                   </el-table-column>
                   <el-table-column
@@ -347,11 +347,23 @@
       }
     },
     methods: {
+      renderSize(value) {
+        if (null == value || value == '') {
+          return "0 Bytes";
+        }
+        var unitArr = new Array("Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB");
+        var index = 0;
+        var srcsize = parseFloat(value);
+        index = Math.floor(Math.log(srcsize) / Math.log(1024));
+        var size = srcsize / Math.pow(1024, index);
+        size = size.toFixed(2);//保留的小数位数
+        return size + unitArr[index];
+      },
       async handleCurrentChange(val) {
         if (!val) return
-        if (val["isdir"] !== 0) {
+        if (parseInt(val["isdir"]) !== 0) {
           this.tableLoading = true
-          let res = await getDir(this.baiduYunData.shareid, this.baiduYunData.uk, this.baiduYunData.randsk, val["path"])
+          let res = await getDir(this.baiduYun.surl, this.baiduYunData.randsk, val["path"])
           this.tableLoading = false
           if (res.code === 1) {
             this.$msg({
@@ -379,7 +391,7 @@
         let val = this.currentRow
         this.tableLoading = true
         let res = await getDownloadUrl({
-          share_id: this.baiduYunData.shareid,
+          share_id: this.baiduYunData.share_id,
           uk: this.baiduYunData.uk,
           path: val.path,
           pwd: this.baiduYun.code,
@@ -466,8 +478,8 @@
           return;
         }
         this.baiduYunData = a
-        if (a['file_list'] && a['file_list']['errno'] === 0) {
-          this.baiduYunList = a['file_list']['list'];
+        if (a['list'] && a['errno'] === 0) {
+          this.baiduYunList = a['list'];
         } else {
           this.$msg({
             type: 'warning',
